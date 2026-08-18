@@ -61,6 +61,13 @@ class AddEmployeeDialog(ctk.CTkToplevel):
         ctk.CTkButton(bank_hdr, text=self.t("+ 은행 추가"), width=90, height=28,
                       font=ctk.CTkFont(size=12), command=self._add_bank_field).pack(side="right")
 
+        col_lbl = ctk.CTkFrame(form, fg_color="transparent")
+        col_lbl.pack(fill="x")
+        ctk.CTkLabel(col_lbl, text=self.t("은행명"), font=ctk.CTkFont(size=11),
+                     text_color="gray50").pack(side="left")
+        ctk.CTkLabel(col_lbl, text=self.t("계좌번호"), font=ctk.CTkFont(size=11),
+                     text_color="gray50", width=110).pack(side="right", padx=(0, 122))
+
         self._bank_container = ctk.CTkFrame(form, fg_color="transparent")
         self._bank_container.pack(fill="x")
         self._add_bank_field()
@@ -157,6 +164,13 @@ class EditEmployeeDialog(ctk.CTkToplevel):
         ctk.CTkLabel(bank_hdr, text=self.t("은행 (이름 + 통화)"), font=ctk.CTkFont(size=14), anchor="w").pack(side="left")
         ctk.CTkButton(bank_hdr, text=self.t("+ 은행 추가"), width=90, height=28,
                       font=ctk.CTkFont(size=12), command=self._add_bank_field).pack(side="right")
+
+        col_lbl = ctk.CTkFrame(scroll, fg_color="transparent")
+        col_lbl.pack(fill="x")
+        ctk.CTkLabel(col_lbl, text=self.t("은행명"), font=ctk.CTkFont(size=11),
+                     text_color="gray50").pack(side="left")
+        ctk.CTkLabel(col_lbl, text=self.t("계좌번호"), font=ctk.CTkFont(size=11),
+                     text_color="gray50", width=110).pack(side="right", padx=(0, 122))
 
         self._bank_container = ctk.CTkFrame(scroll, fg_color="transparent")
         self._bank_container.pack(fill="x")

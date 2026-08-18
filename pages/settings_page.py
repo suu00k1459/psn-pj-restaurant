@@ -246,10 +246,10 @@ class SettingsPage(ctk.CTkFrame):
                                    corner_radius=4)
                 row.pack(fill="x", pady=1)
 
-                name_color = "gray50" if is_pending else None
-                name_kw = {"text_color": name_color} if name_color else {}
-                ctk.CTkLabel(row, text=v["name"], font=ctk.CTkFont(size=13),
-                             width=160, anchor="w", **name_kw).pack(side="left", padx=10, pady=5)
+                name_var = ctk.StringVar(value=v["name"])
+                ctk.CTkEntry(row, textvariable=name_var, width=160, font=ctk.CTkFont(size=13),
+                             state="disabled" if is_pending else "normal"
+                             ).pack(side="left", padx=(6, 4), pady=5)
 
                 note_var = ctk.StringVar(value=v.get("note", ""))
                 ctk.CTkEntry(row, textvariable=note_var, width=200, font=ctk.CTkFont(size=12),
@@ -267,7 +267,8 @@ class SettingsPage(ctk.CTkFrame):
                                 ).pack(side="left", padx=(0, 6), pady=4)
 
                 self._vendor_row_vars.append({
-                    "name": v["name"], "note_var": note_var, "cat_var": cat_var,
+                    "original_name": v["name"], "name_var": name_var,
+                    "note_var": note_var, "cat_var": cat_var,
                 })
 
                 if self._delete_mode:
@@ -327,24 +328,53 @@ class SettingsPage(ctk.CTkFrame):
             return
         vendors = cm.get_vendors_full()
         name_to_idx = {v["name"]: i for i, v in enumerate(vendors)}
+        renamed_count = 0
+
         for rd in self._vendor_row_vars:
-            name = rd["name"]
-            if name in name_to_idx:
-                vendors[name_to_idx[name]]["note"] = rd["note_var"].get().strip()
-                vendors[name_to_idx[name]]["category"] = rd["cat_var"].get()
+            orig = rd["original_name"]
+            new_name = rd["name_var"].get().strip()
+            if not new_name:
+                continue
+            if orig not in name_to_idx:
+                continue
+
+            idx = name_to_idx[orig]
+            # 이름이 변경된 경우 매입 기록도 일괄 변경
+            if new_name != orig:
+                all_names = {v["name"] for v in vendors}
+                if new_name in all_names and new_name != orig:
+                    self.vendor_msg.configure(
+                        text=f"'{new_name}' 이름이 이미 존재합니다", text_color="red")
+                    self.after(2500, lambda: self.vendor_msg.configure(text=""))
+                    return
+                try:
+                    renamed_count += em.rename_vendor_in_expenses(orig, new_name)
+                except Exception as exc:
+                    self.vendor_msg.configure(text=f"오류: {exc}", text_color="red")
+                    return
+                vendors[idx]["name"] = new_name
+                # name_to_idx 갱신
+                name_to_idx[new_name] = idx
+                del name_to_idx[orig]
+
+            vendors[idx]["note"] = rd["note_var"].get().strip()
+            vendors[idx]["category"] = rd["cat_var"].get()
+
         cm.set_vendors_full(vendors)
 
-        # 저장된 분류 기준으로 모든 매입 엑셀 기록 강제 동기화
-        category_map = {rd["name"]: rd["cat_var"].get() for rd in self._vendor_row_vars}
+        # 분류 기준 동기화
+        category_map = {v["name"]: v["category"] for v in vendors}
         try:
-            total = em.sync_vendor_categories_in_expenses(category_map)
+            cat_updated = em.sync_vendor_categories_in_expenses(category_map)
         except Exception as exc:
             self.vendor_msg.configure(text=f"오류: {exc}", text_color="red")
             return
 
+        self._refresh_vendors()
+        total = renamed_count + cat_updated
         if total:
             self.vendor_msg.configure(
-                text=f"저장 완료 — 매입내역 {total}건 분류 업데이트됨", text_color="green")
+                text=f"저장 완료 — 매입내역 {total}건 업데이트됨", text_color="green")
         else:
             self.vendor_msg.configure(text="저장되었습니다", text_color="green")
         self.after(2500, lambda: self.vendor_msg.configure(text=""))

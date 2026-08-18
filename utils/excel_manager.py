@@ -259,6 +259,29 @@ def update_vendor_category_in_expenses(vendor_name: str, new_category: str) -> i
     return sync_vendor_categories_in_expenses({vendor_name: new_category})
 
 
+def rename_vendor_in_expenses(old_name: str, new_name: str) -> int:
+    """모든 매입 기록에서 업체명 변경. 변경된 건수 반환."""
+    count = 0
+    for fp in _get_data_dir().glob("*.xlsx"):
+        parts = fp.stem.split("_")
+        if len(parts) != 2:
+            continue
+        try:
+            y, m = int(parts[0]), int(parts[1])
+        except ValueError:
+            continue
+        records = load_expenses(y, m)
+        changed = False
+        for r in records:
+            if r.get("vendor") == old_name:
+                r["vendor"] = new_name
+                count += 1
+                changed = True
+        if changed:
+            replace_expenses(y, m, records)
+    return count
+
+
 def load_expenses(year: int, month: int) -> list[dict]:
     fp = _get_filepath(year, month)
     if not fp.exists():
