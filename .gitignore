@@ -1,0 +1,25 @@
+# 데이터 파일 (개인 정보 포함 - 절대 업로드 안 함)
+*.xlsx
+employees.json
+prepay_balance.json
+employee_salary.json
+config.json
+
+# 빌드 결과물
+dist/
+build/
+*.spec.bak
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# 내보낸 데이터
+*.csv
+
+# 기타
+_test.py
+err.txt
+기능정리초안.txt
