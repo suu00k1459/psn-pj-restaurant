@@ -840,9 +840,10 @@ class EmployeePage(ctk.CTkFrame):
         btn_row.pack(fill="x", pady=(6, 0))
         ctk.CTkButton(btn_row, text=self.t("저장"), width=90, height=34, font=ctk.CTkFont(size=13),
                       command=lambda: self._save_staff_salary(name, taxes)).pack(side="left", padx=(0, 8))
-        ctk.CTkButton(btn_row, text=self.t("월급 정산"), width=100, height=34,
-                      fg_color="#38a169", hover_color="#276749", font=ctk.CTkFont(size=13),
-                      command=lambda: self._settle_staff(name)).pack(side="left")
+        if self.role == "admin":
+            ctk.CTkButton(btn_row, text=self.t("월급 정산"), width=100, height=34,
+                          fg_color="#38a169", hover_color="#276749", font=ctk.CTkFont(size=13),
+                          command=lambda: self._settle_staff(name)).pack(side="left")
         self.salary_msg = ctk.CTkLabel(btn_row, text="", font=ctk.CTkFont(size=12))
         self.salary_msg.pack(side="left", padx=8)
 
@@ -917,51 +918,48 @@ class EmployeePage(ctk.CTkFrame):
         balance = em.get_prepay_balance(name)
         self.weekly_var = ctk.StringVar(value="0")
         w_row = ctk.CTkFrame(inner, fg_color="transparent")
-        w_row.pack(fill="x", pady=(4, 0))
+        w_row.pack(fill="x", pady=(4, 10))
         ctk.CTkLabel(w_row, text=self.t("이번 주급 (ft)"), font=ctk.CTkFont(size=13), width=160).pack(side="left")
         ctk.CTkEntry(w_row, textvariable=self.weekly_var, width=140, font=ctk.CTkFont(size=13)).pack(side="left")
 
-        net2_row = ctk.CTkFrame(inner, fg_color="transparent")
-        net2_row.pack(fill="x", pady=(0, 4))
-        ctk.CTkLabel(net2_row, text=self.t("정산 후 상태"), font=ctk.CTkFont(size=12),
-                     text_color="gray50", width=160).pack(side="left")
-        self.part_net_label = ctk.CTkLabel(net2_row, text="", font=ctk.CTkFont(size=13, weight="bold"))
-        self.part_net_label.pack(side="left")
+        if self.role == "admin":
+            net2_row = ctk.CTkFrame(inner, fg_color="transparent")
+            net2_row.pack(fill="x", pady=(0, 4))
+            ctk.CTkLabel(net2_row, text=self.t("정산 후 상태"), font=ctk.CTkFont(size=12),
+                         text_color="gray50", width=160).pack(side="left")
+            self.part_net_label = ctk.CTkLabel(net2_row, text="", font=ctk.CTkFont(size=13, weight="bold"))
+            self.part_net_label.pack(side="left")
 
-        def _update_net(*_):
-            try:
-                w = float(self.weekly_var.get())
-            except ValueError:
-                w = 0.0
-            b = em.get_prepay_balance(name)
-            diff = round(w - b, 2)
-            if self.lang == "en":
-                if b == 0:
-                    self.part_net_label.configure(text=f"Pay {w:,.0f} ft", text_color="#1a56db")
-                elif diff > 0:
-                    self.part_net_label.configure(text=f"Additional {diff:,.0f} ft", text_color="#38a169")
-                elif diff < 0:
-                    self.part_net_label.configure(text=f"Prepay {-diff:,.0f} ft remaining", text_color="#c05000")
+            def _update_net(*_):
+                try:
+                    w = float(self.weekly_var.get())
+                except ValueError:
+                    w = 0.0
+                b = em.get_prepay_balance(name)
+                diff = round(w - b, 2)
+                if self.lang == "en":
+                    if b == 0:
+                        self.part_net_label.configure(text=f"Pay {w:,.0f} ft", text_color="#1a56db")
+                    elif diff > 0:
+                        self.part_net_label.configure(text=f"Additional {diff:,.0f} ft", text_color="#38a169")
+                    elif diff < 0:
+                        self.part_net_label.configure(text=f"Prepay {-diff:,.0f} ft remaining", text_color="#c05000")
+                    else:
+                        self.part_net_label.configure(text="Prepay settled", text_color="#38a169")
                 else:
-                    self.part_net_label.configure(text="Prepay settled", text_color="#38a169")
-            else:
-                if b == 0:
-                    self.part_net_label.configure(text=f"지급 {w:,.0f} ft", text_color="#1a56db")
-                elif diff > 0:
-                    self.part_net_label.configure(text=f"추가 지급 {diff:,.0f} ft", text_color="#38a169")
-                elif diff < 0:
-                    self.part_net_label.configure(text=f"선지급 {-diff:,.0f} ft 남음", text_color="#c05000")
-                else:
-                    self.part_net_label.configure(text="선지급 완납", text_color="#38a169")
+                    if b == 0:
+                        self.part_net_label.configure(text=f"지급 {w:,.0f} ft", text_color="#1a56db")
+                    elif diff > 0:
+                        self.part_net_label.configure(text=f"추가 지급 {diff:,.0f} ft", text_color="#38a169")
+                    elif diff < 0:
+                        self.part_net_label.configure(text=f"선지급 {-diff:,.0f} ft 남음", text_color="#c05000")
+                    else:
+                        self.part_net_label.configure(text="선지급 완납", text_color="#38a169")
 
-        self.weekly_var.trace_add("write", _update_net)
-        _update_net()
+            self.weekly_var.trace_add("write", _update_net)
+            _update_net()
 
         self.part_tax_var = ctk.StringVar(value="0")
-        tx_row = ctk.CTkFrame(inner, fg_color="transparent")
-        tx_row.pack(fill="x", pady=(0, 8))
-        ctk.CTkLabel(tx_row, text=self.t("세금 (ft)"), font=ctk.CTkFont(size=13), width=160).pack(side="left")
-        ctk.CTkEntry(tx_row, textvariable=self.part_tax_var, width=140, font=ctk.CTkFont(size=13)).pack(side="left")
 
         btn_row = ctk.CTkFrame(inner, fg_color="transparent")
         btn_row.pack(fill="x")
@@ -1008,6 +1006,7 @@ class EmployeePage(ctk.CTkFrame):
         em.set_employee_salary(name, info)
 
         self._record_salary_to_excel(name, "스탭", official, actual)
+        self._apply_official_salary_to_prepay(name, official)
         self._refresh_list()
         self._build_detail(name)
         self._show_hdr_msg(self.t("급여 저장됨"), "green")
@@ -1034,6 +1033,12 @@ class EmployeePage(ctk.CTkFrame):
         em.set_employee_salary(name, info)
 
         self._record_salary_to_excel(name, "파트타이머", official, actual)
+        # 파트타이머 공식급여는 선지급금으로 추가 (나중에 주급 지급 시 차감)
+        today_str = date.today().strftime("%Y-%m-%d")
+        cur_ym = today_str[:7]
+        em.delete_prepay_entries_by_method(name, "공식급여", cur_ym)
+        if official > 0:
+            em.add_prepay(name, official, "공식급여", today_str)
         # 시급이 변경됐을 때만 Excel에 기록 (그래프용 이력)
         if hourly > 0 and abs(hourly - old_hourly) > 0.01:
             today = date.today()
@@ -1057,6 +1062,17 @@ class EmployeePage(ctk.CTkFrame):
         if actual > 0:
             em.save_salary(y, m, {"date": date_str, "name": name, "position": position,
                                    "category": "실질지급", "amount_ft": actual})
+
+    def _apply_official_salary_to_prepay(self, name: str, official: float):
+        """공식급여 지급 시 선지급 잔액에서 차감 (이달 기존 항목 교체)."""
+        today_str = date.today().strftime("%Y-%m-%d")
+        cur_ym = today_str[:7]
+        em.delete_prepay_entries_by_method(name, "공식급여", cur_ym)
+        if official > 0:
+            balance = em.get_prepay_balance(name)
+            deduct = min(official, balance)
+            if deduct > 0:
+                em.add_prepay(name, -deduct, "공식급여", today_str)
 
     # ── 정산 ─────────────────────────────────────────────────────────
 
@@ -1223,13 +1239,11 @@ class EmployeePage(ctk.CTkFrame):
                 cat = rec.get("category", "")
                 if cat not in SALARY_CATS:
                     continue
-                if cat == "월급정산":
-                    continue
                 key = (rec["date"], cat, rec.get("amount_ft", 0))
                 if key in seen:
                     continue
                 seen.add(key)
-                if cat == "주급" and rec["date"] in deduction_dates:
+                if self.role == "admin" and cat == "주급" and rec["date"] in deduction_dates:
                     continue
                 history.append({
                     "date": rec["date"],
@@ -1240,32 +1254,39 @@ class EmployeePage(ctk.CTkFrame):
 
         history.sort(key=lambda x: x.get("date", ""), reverse=True)
         if self.role != "admin":
-            history = [h for h in history if h.get("method") != "실질지급"]
+            history = [h for h in history
+                       if h.get("_source") != "prepay"
+                       and h.get("method") in ("공식급여", "주급")]
 
         title_row = ctk.CTkFrame(parent, fg_color="transparent")
         title_row.pack(fill="x", padx=16, pady=(12, 4))
         ctk.CTkLabel(title_row, text=self.t("내역"),
                      font=ctk.CTkFont(size=15, weight="bold")).pack(side="left")
-        self._hist_delete_btn = ctk.CTkButton(
-            title_row, text=self.t("선택 삭제"), width=70, height=26,
-            fg_color="#e53e3e", hover_color="#c53030",
-            state="disabled", font=ctk.CTkFont(size=11),
-            command=lambda: self._do_hist_delete(name))
-        self._hist_delete_btn.pack(side="right")
+        if self.role == "admin":
+            self._hist_delete_btn = ctk.CTkButton(
+                title_row, text=self.t("선택 삭제"), width=70, height=26,
+                fg_color="#e53e3e", hover_color="#c53030",
+                state="disabled", font=ctk.CTkFont(size=11),
+                command=lambda: self._do_hist_delete(name))
+            self._hist_delete_btn.pack(side="right")
 
         self._hist_selected_h = None
         self._hist_row_refs = []
 
         cur_ym = f"{today.year}-{today.month:02d}"
-        month_wage = sum(abs(h.get("amount", 0)) for h in history
-                         if h.get("method") == "주급차감" and h.get("date", "")[:7] == cur_ym)
+        if self.role == "admin":
+            month_wage = sum(abs(h.get("amount", 0)) for h in history
+                             if h.get("method") == "주급차감" and h.get("date", "")[:7] == cur_ym)
+            wage_label_text = f"{self.t('이번 달 주급')}: {month_wage:,.0f} ft"
+        else:
+            month_total = sum(h.get("amount", 0) for h in history if h.get("date", "")[:7] == cur_ym)
+            wage_label_text = f"이번 달 수령: {month_total:,.0f} ft"
         balance = em.get_prepay_balance(name)
 
         smry = ctk.CTkFrame(parent, fg_color=("gray92", "gray18"), corner_radius=6)
         smry.pack(fill="x", padx=16, pady=(0, 6))
-        wage_lbl = f"{self.t('이번 달 주급')}: {month_wage:,.0f} ft"
-        ctk.CTkLabel(smry, text=wage_lbl,
-                     font=ctk.CTkFont(size=12, weight="bold"), text_color="#e53e3e").pack(side="left", padx=12, pady=6)
+        ctk.CTkLabel(smry, text=wage_label_text,
+                     font=ctk.CTkFont(size=12, weight="bold"), text_color="#1a56db").pack(side="left", padx=12, pady=6)
         if self.role == "admin":
             bal_lbl_txt = f"{self.t('선지급 잔액:')} {balance:,.0f} ft"
             ctk.CTkLabel(smry, text=bal_lbl_txt,
@@ -1274,12 +1295,17 @@ class EmployeePage(ctk.CTkFrame):
 
         hrow = ctk.CTkFrame(parent, fg_color="#1a56db", corner_radius=6)
         hrow.pack(fill="x", padx=16, pady=(0, 2))
-        hist_cols = [(self.t("날짜"), 100), (self.t("구분"), 150), (self.t("금액(ft)"), 110)]
+        if self.role == "admin":
+            hist_cols = [(self.t("날짜"), 90), (self.t("구분"), 130),
+                         ("선지급/공식(ft)", 115), ("주급(ft)", 100)]
+        else:
+            hist_cols = [(self.t("날짜"), 88), (self.t("구분"), 130), (self.t("금액(ft)"), 96)]
         for h_text, w in hist_cols:
             ctk.CTkLabel(hrow, text=h_text, font=ctk.CTkFont(size=12, weight="bold"),
                          text_color="white", width=w, height=24).pack(side="left", padx=4, pady=1)
-        ctk.CTkLabel(hrow, text=self.t("수정"), font=ctk.CTkFont(size=11, weight="bold"),
-                     text_color="white", width=44).pack(side="left", padx=2)
+        if self.role == "admin":
+            ctk.CTkLabel(hrow, text=self.t("수정"), font=ctk.CTkFont(size=11, weight="bold"),
+                         text_color="white", width=44).pack(side="left", padx=2)
 
         scroll = ctk.CTkScrollableFrame(parent, height=200, fg_color="transparent")
         scroll.pack(fill="x", padx=16, pady=(0, 12))
@@ -1295,45 +1321,78 @@ class EmployeePage(ctk.CTkFrame):
             amount = h.get("amount", 0)
             src = h.get("_source", "")
 
-            if method == "주급차감":
-                display_method = self.t("주급차감")
-                color = "#e53e3e"
-                display_amount = f"{amount:,.0f}"
-            elif method in ("공식급여",):
-                display_method = self.t("공식급여")
-                color = "gray50"
-                display_amount = f"{amount:,.0f} ft"
-            elif method in ("실질지급",):
-                display_method = self.t("실질지급")
-                color = "#1a56db"
-                display_amount = f"{amount:,.0f} ft"
-            elif amount >= 0:
-                display_method = self.t(method)
-                color = "#1a56db"
-                display_amount = f"+{amount:,.0f}"
-            else:
-                display_method = self.t(method)
-                color = "#e53e3e"
-                display_amount = f"{amount:,.0f}"
-
-            if src == "excel" and method not in ("공식급여", "실질지급"):
-                color = "#e53e3e"
-                display_amount = f"-{amount:,.0f}"
-
             drow = ctk.CTkFrame(scroll, fg_color=normal_bg, corner_radius=4)
             drow.pack(fill="x", pady=1)
             self._hist_row_refs.append((h, drow, normal_bg))
 
-            ctk.CTkLabel(drow, text=h.get("date", ""), width=100, height=22,
-                         font=ctk.CTkFont(size=12)).pack(side="left", padx=4, pady=0)
-            ctk.CTkLabel(drow, text=display_method, width=150, height=22,
-                         font=ctk.CTkFont(size=12, weight="bold"),
-                         text_color=color).pack(side="left", padx=4, pady=0)
-            ctk.CTkLabel(drow, text=display_amount, width=110, height=22,
-                         font=ctk.CTkFont(size=12, weight="bold"),
-                         text_color=color).pack(side="left", padx=4, pady=0)
+            if self.role == "admin":
+                # ── 두 열 분리: 선지급/공식(파랑) | 주급(빨강) ──────────────
+                is_wage = (
+                    (src == "prepay" and method == "주급차감") or
+                    (src == "excel" and method in ("주급", "주급정산", "주급(직원간)"))
+                )
+                display_method = self.t(method)
+                if is_wage:
+                    blue_text, red_text = "", f"{abs(amount):,.0f}"
+                else:
+                    sign = "+" if amount > 0 else ""
+                    blue_text = f"{sign}{amount:,.0f}"
+                    red_text = ""
 
-            is_editable = (method == "주급차감") or (src == "excel" and method in ("주급", "주급정산"))
+                ctk.CTkLabel(drow, text=h.get("date", ""), width=90, height=22,
+                             font=ctk.CTkFont(size=12)).pack(side="left", padx=4, pady=0)
+                ctk.CTkLabel(drow, text=display_method, width=130, height=22,
+                             font=ctk.CTkFont(size=12, weight="bold"),
+                             text_color="#1a56db" if not is_wage else "#e53e3e"
+                             ).pack(side="left", padx=4, pady=0)
+                ctk.CTkLabel(drow, text=blue_text, width=115, height=22,
+                             font=ctk.CTkFont(size=12, weight="bold"),
+                             text_color="#1a56db").pack(side="left", padx=4, pady=0)
+                ctk.CTkLabel(drow, text=red_text, width=100, height=22,
+                             font=ctk.CTkFont(size=12, weight="bold"),
+                             text_color="#e53e3e").pack(side="left", padx=4, pady=0)
+            else:
+                # ── 직원 뷰: 단일 금액 열 ──────────────────────────────────
+                if method == "주급":
+                    try:
+                        month_num = int(h.get("date", "")[5:7])
+                    except (ValueError, IndexError):
+                        month_num = 0
+                    display_method = f"{month_num}월 주급"
+                    color = "#38a169"
+                    display_amount = f"{amount:,.0f} ft"
+                elif method == "공식급여":
+                    display_method = self.t("공식급여")
+                    color = "#1a56db"
+                    display_amount = f"{amount:,.0f} ft"
+                else:
+                    display_method = self.t(method)
+                    color = "#1a56db"
+                    display_amount = f"{amount:,.0f} ft"
+
+                ctk.CTkLabel(drow, text=h.get("date", ""), width=88, height=22,
+                             font=ctk.CTkFont(size=12)).pack(side="left", padx=4, pady=0)
+                ctk.CTkLabel(drow, text=display_method, width=130, height=22,
+                             font=ctk.CTkFont(size=12, weight="bold"),
+                             text_color=color).pack(side="left", padx=4, pady=0)
+                ctk.CTkLabel(drow, text=display_amount, width=96, height=22,
+                             font=ctk.CTkFont(size=12, weight="bold"),
+                             text_color=color).pack(side="left", padx=4, pady=0)
+
+                if method == "주급" and src == "excel":
+                    ctk.CTkButton(drow, text=self.t("수정"), width=40, height=22,
+                                  font=ctk.CTkFont(size=10),
+                                  command=lambda hh=h: self._edit_wage_entry(hh, name)
+                                  ).pack(side="left", padx=(2, 0))
+                    ctk.CTkButton(drow, text="✕", width=28, height=22,
+                                  font=ctk.CTkFont(size=10),
+                                  fg_color="#e53e3e", hover_color="#c53030",
+                                  command=lambda hh=h: self._inline_delete_wage(hh, name)
+                                  ).pack(side="left", padx=2)
+
+            is_editable = self.role == "admin" and (
+                (method == "주급차감") or (src == "excel" and method in ("주급", "주급정산"))
+            )
             if is_editable:
                 ctk.CTkButton(drow, text=self.t("수정"), width=44, height=22, font=ctk.CTkFont(size=10),
                               command=lambda hh=h: self._edit_wage_entry(hh, name)).pack(side="left", padx=2)
@@ -1343,11 +1402,12 @@ class EmployeePage(ctk.CTkFrame):
                 for _, f, bg in self._hist_row_refs:
                     f.configure(fg_color=bg)
                 frame.configure(fg_color=("#c7d8f5", "#2a3a5c"))
-                hh_method = hh.get("method", "")
-                hh_src = hh.get("_source", "")
-                can_del = (hh_method in ("주급차감", "수동 초기화", "공식급여", "실질지급")
-                           or (hh_src == "excel" and hh_method in ("주급", "주급정산")))
-                self._hist_delete_btn.configure(state="normal" if can_del else "disabled")
+                if self.role == "admin":
+                    hh_method = hh.get("method", "")
+                    hh_src = hh.get("_source", "")
+                    can_del = (hh_method in ("주급차감", "수동 초기화", "공식급여", "실질지급")
+                               or (hh_src == "excel" and hh_method in ("주급", "주급정산")))
+                    self._hist_delete_btn.configure(state="normal" if can_del else "disabled")
 
             drow.bind("<Button-1>", on_row_click)
             for child in drow.winfo_children():
@@ -1442,6 +1502,14 @@ class EmployeePage(ctk.CTkFrame):
             self._build_detail(name)
 
         EditWageDialog(self, display_h, name, on_save, lang=self.lang)
+
+    def _inline_delete_wage(self, h: dict, name: str):
+        """직원 뷰에서 주급 항목 직접 삭제."""
+        old_date = h["date"]
+        old_y, old_m = int(old_date[:4]), int(old_date[5:7])
+        em.delete_salary_record(old_y, old_m, name, old_date, "주급", h["amount"])
+        self._reverse_prepay_deduction(name, old_date)
+        self._build_detail(name)
 
     def _reverse_prepay_deduction(self, name: str, date_str: str):
         data = em.load_prepay()

@@ -195,12 +195,13 @@ class ReportPage(ctk.CTkFrame):
                 (self.t("순이익 (매출 - 지출)"), total_sales - total_out, "#6b46c1"),
             ]
         else:
+            cat1_total = sum(e["amount_ft"] for e in expenses if e.get("category") == "식재료 및 판관비")
+            cat2_total = sum(e["amount_ft"] for e in expenses if e.get("category") == "시설 및 운영 관리비")
             items = [
-                (self.t("총 카드 매출"), total_card, "#1a56db"),
-                (self.t("총 NAV Cash"), total_nav, "#1a56db"),
-                (self.t("총 Invoice"), total_invoice, "#1a56db"),
-                ("─────────────", None, "gray"),
                 (self.t("총 매입 지출"), total_expense, "#e53e3e"),
+                ("─────────────", None, "gray"),
+                (self.t("식재료 및 판관비"), cat1_total, "#276749"),
+                (self.t("시설 및 운영 관리비"), cat2_total, "#1a56db"),
             ]
 
         grid = ctk.CTkFrame(summary_card, fg_color="transparent")
@@ -231,12 +232,8 @@ class ReportPage(ctk.CTkFrame):
             _set_korean_font()
             self._draw_charts(y, m, sales, expenses, salaries)
         else:
-            if not expenses:
-                ctk.CTkLabel(self.scroll, text=self.t("매입 데이터가 없습니다"),
-                             text_color="gray", font=ctk.CTkFont(size=14)).pack(pady=20)
-                return
             _set_korean_font()
-            self._draw_employee_charts(y)
+            self._draw_employee_charts(y, m)
 
     def _draw_charts(self, y, m, sales, expenses, salaries):
         chart_card = ctk.CTkFrame(self.scroll, corner_radius=12)
@@ -310,47 +307,72 @@ class ReportPage(ctk.CTkFrame):
         self._canvas_widget = canvas
         plt.close(fig)
 
-    def _draw_employee_charts(self, y):
-        chart_card = ctk.CTkFrame(self.scroll, corner_radius=12)
-        chart_card.pack(fill="x", pady=(0, 16))
-        ctk.CTkLabel(chart_card, text=self.t("월별 매입 추이"),
-                     font=ctk.CTkFont(size=17, weight="bold")).pack(anchor="w", padx=20, pady=(16, 8))
-
+    def _draw_employee_charts(self, y, selected_m):
         if self.lang == "en":
             from utils.date_widgets import _MONTH_ABBR_EN
             month_labels = _MONTH_ABBR_EN
         else:
             month_labels = [f"{i}월" for i in range(1, 13)]
-        values = []
+
+        cat1_vals, cat2_vals, total_vals = [], [], []
         for m in range(1, 13):
             month_expenses = em.load_expenses(y, m)
-            values.append(sum(e.get("amount_ft", 0) for e in month_expenses))
+            c1 = sum(e.get("amount_ft", 0) for e in month_expenses if e.get("category") == "식재료 및 판관비")
+            c2 = sum(e.get("amount_ft", 0) for e in month_expenses if e.get("category") == "시설 및 운영 관리비")
+            cat1_vals.append(c1)
+            cat2_vals.append(c2)
+            total_vals.append(sum(e.get("amount_ft", 0) for e in month_expenses))
 
-        if all(v == 0 for v in values):
+        chart_card = ctk.CTkFrame(self.scroll, corner_radius=12)
+        chart_card.pack(fill="x", pady=(0, 16))
+
+        if all(v == 0 for v in total_vals):
             ctk.CTkLabel(chart_card, text=self.t("매입 데이터 없음"), text_color="gray",
                          font=ctk.CTkFont(size=13)).pack(pady=20)
             return
 
-        fig, ax = plt.subplots(figsize=(12, 5))
+        chart_title = f"Monthly Purchase Trend {y}" if self.lang == "en" else f"{y}년 월별 매입 추이"
+        ctk.CTkLabel(chart_card, text=chart_title,
+                     font=ctk.CTkFont(size=17, weight="bold")).pack(anchor="w", padx=20, pady=(16, 8))
+
+        fig, ax = plt.subplots(figsize=(12, 6))
         fig.patch.set_facecolor("#f8faff")
-        chart_legend = self.t("월별 매입")
-        ax.plot(month_labels, values, marker="o", color="#e53e3e", linewidth=2.5,
-                markersize=8, markerfacecolor="white", markeredgewidth=2.5,
-                label=chart_legend)
-        ax.fill_between(range(12), values, alpha=0.08, color="#e53e3e")
-        ax.set_xticks(range(12))
+        x = list(range(12))
+        sel_idx = selected_m - 1
+
+        c1_label = self.t("식재료 및 판관비")
+        c2_label = self.t("시설 및 운영 관리비")
+        total_label = self.t("월별 매입")
+
+        # Bar chart for total
+        bar_colors = ["#e53e3e" if i == sel_idx else "#fc8181" for i in x]
+        bars = ax.bar(x, total_vals, color=bar_colors, alpha=0.55, width=0.6, label=total_label, zorder=2)
+
+        # Line charts for categories (overlaid on bars)
+        l1, = ax.plot(x, cat1_vals, marker="o", color="#276749", linewidth=2.5,
+                      markersize=7, markerfacecolor="white", markeredgewidth=2,
+                      label=c1_label, zorder=3)
+
+        l2, = ax.plot(x, cat2_vals, marker="s", color="#1a56db", linewidth=2.5,
+                      markersize=7, markerfacecolor="white", markeredgewidth=2,
+                      label=c2_label, zorder=3)
+
+        ax.set_xticks(x)
         ax.set_xticklabels(month_labels, fontsize=14)
-        ax.tick_params(axis="y", labelsize=14)
-        title = f"Monthly Purchase Trend {y}" if self.lang == "en" else f"{y}년 월별 매입 추이"
-        ax.set_title(title, fontsize=19, pad=16, fontweight="bold")
-        ax.set_ylabel(self.t("금액 (ft)"), fontsize=16)
-        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f"{x:,.0f}"))
-        ax.legend(fontsize=14, loc="upper left")
+        ax.tick_params(axis="y", labelsize=13)
+        ax.set_ylabel(self.t("금액 (ft)"), fontsize=14, color="#555555")
+        ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda val, _: f"{val:,.0f}"))
         ax.set_facecolor("#fafafa")
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
-        fig.tight_layout(pad=3.0)
 
+        ax.legend(handles=[bars, l1, l2], fontsize=13, loc="upper left")
+        # Highlight selected month
+        ax.get_xticklabels()[sel_idx].set_color("#e53e3e")
+        ax.get_xticklabels()[sel_idx].set_fontweight("bold")
+        ax.axvline(x=sel_idx, color="#e53e3e", linewidth=1, linestyle=":", alpha=0.4)
+
+        fig.tight_layout(pad=3.0)
         canvas = FigureCanvasTkAgg(fig, master=chart_card)
         canvas.draw()
         canvas.get_tk_widget().pack(fill="x", padx=16, pady=(0, 16))

@@ -515,6 +515,22 @@ def reset_prepay(name: str) -> None:
     save_prepay(data)
 
 
+def delete_prepay_entries_by_method(name: str, method: str, ym_prefix: str) -> None:
+    """Remove prepay history entries matching method+month prefix and restore balance."""
+    data = load_prepay()
+    if name not in data:
+        return
+    old_hist = data[name].get("history", [])
+    to_remove = [e for e in old_hist
+                 if e.get("method") == method and e.get("date", "").startswith(ym_prefix)]
+    if not to_remove:
+        return
+    removed_sum = sum(e.get("amount", 0) for e in to_remove)
+    data[name]["history"] = [e for e in old_hist if e not in to_remove]
+    data[name]["balance"] = round(data[name].get("balance", 0.0) - removed_sum, 2)
+    save_prepay(data)
+
+
 def transfer_prepay(from_name: str, to_name: str, amount: float, date_str: str) -> None:
     data = load_prepay()
     # 지급자: 잔액 차감

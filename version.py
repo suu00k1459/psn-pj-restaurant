@@ -1,3 +1,3 @@
-VERSION = "1.0.1"
+VERSION = "1.1.0"
 GITHUB_OWNER = "suu00k1459"
 GITHUB_REPO = "psn-pj-restaurant"

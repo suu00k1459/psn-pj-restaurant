@@ -532,8 +532,15 @@ class ExpensePage(ctk.CTkFrame):
         scroll = ctk.CTkScrollableFrame(self, fg_color="transparent")
         scroll.pack(fill="both", expand=True, padx=24, pady=(0, 16))
 
-        self._date_row = DateRow(scroll, on_change=lambda ds: self._refresh_table(), lang=self.lang)
-        self._date_row.pack(fill="x", pady=(8, 16))
+        date_wrapper = ctk.CTkFrame(scroll, fg_color="transparent")
+        date_wrapper.pack(fill="x", pady=(8, 12))
+        self._date_row = DateRow(date_wrapper, on_change=lambda ds: self._refresh_table(), lang=self.lang)
+        self._date_row.pack(side="left")
+        ctk.CTkButton(date_wrapper, text=self.t("불러오기"), width=90, height=32,
+                      font=ctk.CTkFont(size=13),
+                      command=self._load_month).pack(side="left", padx=(12, 0))
+        self._load_msg = ctk.CTkLabel(date_wrapper, text="", font=ctk.CTkFont(size=12))
+        self._load_msg.pack(side="left", padx=8)
 
         self._cat_switcher = ctk.CTkSegmentedButton(
             scroll,
@@ -671,6 +678,18 @@ class ExpensePage(ctk.CTkFrame):
     def _remove_expense_row(self, row: ExpenseRow, rows_list: list):
         if row in rows_list:
             rows_list.remove(row)
+
+    # ── Load month ─────────────────────────────────────────────────────
+
+    def _load_month(self):
+        ym = self._date_row.get_year_month()
+        if not ym:
+            self._load_msg.configure(text=self.t("날짜 형식이 올바르지 않습니다"), text_color="red")
+            self.after(3000, lambda: self._load_msg.configure(text=""))
+            return
+        self._refresh_table()
+        self._load_msg.configure(text=self.t("불러왔습니다"), text_color="green")
+        self.after(2000, lambda: self._load_msg.configure(text=""))
 
     # ── Save ───────────────────────────────────────────────────────────
 

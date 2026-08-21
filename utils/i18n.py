@@ -189,6 +189,7 @@ EN: dict[str, str] = {
     "순이익 (매출 - 지출)": "Net Profit",
     "차트": "Charts",
     "월별 매입 추이": "Monthly Purchase Trend",
+    "월별 카테고리별 매입": "Monthly Purchases by Category",
     "매입 데이터 없음": "No purchase data",
     "데이터 없음": "No data",
     "데이터가 없습니다": "No data available",
