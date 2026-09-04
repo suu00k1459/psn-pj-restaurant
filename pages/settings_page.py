@@ -27,7 +27,7 @@ class SettingsPage(ctk.CTkFrame):
         self.tabview.pack(fill="both", expand=True, padx=24, pady=(0, 16))
 
         if self.role == "admin":
-            tabs = ["환율 설정", "세금 설정", "업체 관리", "비밀번호 변경"]
+            tabs = ["환율 설정", "세금 설정", "업체 관리", "비밀번호 변경", "데이터 폴더"]
         else:
             tabs = [self.t("세금 설정"), self.t("업체 관리")]
         for tab in tabs:
@@ -41,6 +41,7 @@ class SettingsPage(ctk.CTkFrame):
         self._build_vendor_tab()
         if self.role == "admin":
             self._build_password_tab()
+            self._build_data_folder_tab()
 
     # ── 환율 설정 ─────────────────────────────────────────────────────
 
@@ -528,6 +529,65 @@ class SettingsPage(ctk.CTkFrame):
         confirm_var.set("")
         msg_label.configure(text="비밀번호가 변경되었습니다", text_color="green")
         self.after(3000, lambda: msg_label.configure(text=""))
+
+    # ── 데이터 폴더 ───────────────────────────────────────────────────
+
+    def _build_data_folder_tab(self):
+        from utils.local_settings import get_data_dir
+        tab = self.tabview.tab("데이터 폴더")
+        scroll = ctk.CTkScrollableFrame(tab, fg_color="transparent")
+        scroll.pack(fill="both", expand=True)
+
+        card = ctk.CTkFrame(scroll, corner_radius=12)
+        card.pack(fill="x", pady=(12, 0))
+        ctk.CTkLabel(card, text="데이터 저장 폴더",
+                     font=ctk.CTkFont(size=16, weight="bold")).pack(anchor="w", padx=20, pady=(16, 4))
+        ctk.CTkLabel(card,
+                     text="여러 기기에서 동기화하려면 OneDrive 등 클라우드 폴더로 설정하세요.\n"
+                          "경로를 변경해도 기존 파일은 자동으로 이동되지 않습니다.",
+                     font=ctk.CTkFont(size=12), text_color="gray50", justify="left",
+                     ).pack(anchor="w", padx=20, pady=(0, 14))
+
+        current = str(get_data_dir() or "")
+        self._folder_var = ctk.StringVar(value=current)
+
+        path_row = ctk.CTkFrame(card, fg_color="transparent")
+        path_row.pack(fill="x", padx=20, pady=(0, 6))
+        ctk.CTkEntry(path_row, textvariable=self._folder_var,
+                     width=420, height=36, font=ctk.CTkFont(size=13)).pack(side="left", padx=(0, 8))
+        ctk.CTkButton(path_row, text="폴더 선택", width=100, height=36,
+                      command=self._pick_data_folder).pack(side="left")
+
+        btn_row = ctk.CTkFrame(card, fg_color="transparent")
+        btn_row.pack(fill="x", padx=20, pady=(4, 16))
+        ctk.CTkButton(btn_row, text="저장", width=100, height=38,
+                      font=ctk.CTkFont(size=14),
+                      command=self._save_data_folder).pack(side="left")
+        self._folder_msg = ctk.CTkLabel(btn_row, text="", font=ctk.CTkFont(size=13))
+        self._folder_msg.pack(side="left", padx=12)
+
+    def _pick_data_folder(self):
+        import tkinter.filedialog as fd
+        path = fd.askdirectory(title="데이터 저장 폴더 선택",
+                               initialdir=self._folder_var.get())
+        if path:
+            self._folder_var.set(path)
+
+    def _save_data_folder(self):
+        from pathlib import Path
+        from utils.local_settings import set_data_dir
+        path = self._folder_var.get().strip()
+        if not path:
+            self._folder_msg.configure(text="경로를 입력하세요", text_color="orange")
+            return
+        try:
+            Path(path).mkdir(parents=True, exist_ok=True)
+        except Exception as e:
+            self._folder_msg.configure(text=f"폴더 생성 실패: {e}", text_color="red")
+            return
+        set_data_dir(path)
+        self._folder_msg.configure(text="저장되었습니다. 재시작 후 적용됩니다.", text_color="green")
+        self.after(4000, lambda: self._folder_msg.configure(text=""))
 
     def refresh(self):
         self._refresh_vendors()
