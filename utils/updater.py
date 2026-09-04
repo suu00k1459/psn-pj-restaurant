@@ -55,8 +55,10 @@ def download_and_replace(download_url: str, on_progress=None) -> bool:
         bat = Path(os.environ.get("TEMP", current_exe.parent)) / "gansikdang_update.bat"
         bat.write_text(
             f"@echo off\n"
-            f"timeout /t 2 /nobreak >nul\n"
-            f"copy /y \"{new_exe}\" \"{current_exe}\"\n"
+            f":retry\n"
+            f"timeout /t 1 /nobreak >nul\n"
+            f"copy /y \"{new_exe}\" \"{current_exe}\" >nul 2>&1\n"
+            f"if errorlevel 1 goto retry\n"
             f"del \"{new_exe}\"\n"
             f"start \"\" \"{current_exe}\"\n"
             f"del \"%~f0\"\n",
