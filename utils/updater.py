@@ -100,7 +100,7 @@ def _show_dialog(root, info: dict):
 
     dlg = ctk.CTkToplevel(root)
     dlg.title("업데이트 알림")
-    dlg.geometry("420x300")
+    dlg.geometry("420x240")
     dlg.resizable(False, False)
     dlg.grab_set()
     dlg.lift()
@@ -108,7 +108,10 @@ def _show_dialog(root, info: dict):
     ctk.CTkLabel(dlg, text=f"새 버전 {info['version']} 이 출시되었습니다",
                  font=ctk.CTkFont(size=16, weight="bold")).pack(pady=(28, 6))
 
-    notes = (info.get("notes") or "")[:200]
+    notes_raw = (info.get("notes") or "").split("\n")
+    notes = " · ".join(
+        line.lstrip("#- ").strip() for line in notes_raw if line.strip() and not line.startswith("#")
+    )[:120]
     if notes:
         ctk.CTkLabel(dlg, text=notes, font=ctk.CTkFont(size=12),
                      wraplength=360, text_color="gray50").pack(padx=24)
