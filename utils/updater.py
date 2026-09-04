@@ -89,13 +89,12 @@ def check_and_notify(root, delay_ms: int = 4000):
         # 이미 이 버전 알림을 본 경우 다시 묻지 않음
         if info["version"] == get_last_seen_version():
             return
-        set_last_seen_version(info["version"])
-        root.after(delay_ms, lambda: _show_dialog(root, info))
+        root.after(delay_ms, lambda: _show_dialog(root, info, set_last_seen_version))
 
     threading.Thread(target=_bg, daemon=True).start()
 
 
-def _show_dialog(root, info: dict):
+def _show_dialog(root, info: dict, set_last_seen_version=None):
     import customtkinter as ctk
 
     dlg = ctk.CTkToplevel(root)
@@ -147,6 +146,8 @@ def _show_dialog(root, info: dict):
                 root.after(0, lambda: status_var.set("실패. 수동으로 다운로드해 주세요."))
 
         def _on_done():
+            if set_last_seen_version:
+                set_last_seen_version(info["version"])
             status_var.set("완료! 잠시 후 재시작합니다.")
             dlg.after(1500, lambda: (dlg.destroy(), root.destroy()))
 
@@ -156,6 +157,11 @@ def _show_dialog(root, info: dict):
     bf.pack(pady=(14, 0))
     btn_yes = ctk.CTkButton(bf, text="업데이트", width=120, command=_do_update)
     btn_yes.pack(side="left", padx=8)
+    def _dismiss():
+        if set_last_seen_version:
+            set_last_seen_version(info["version"])
+        dlg.destroy()
+
     btn_no = ctk.CTkButton(bf, text="나중에", width=100,
-                            fg_color="gray60", command=dlg.destroy)
+                            fg_color="gray60", command=_dismiss)
     btn_no.pack(side="left", padx=8)
